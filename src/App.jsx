@@ -1,22 +1,18 @@
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-import About from './pages/About';
-import './App.css';
-
-function Home() {
-  return <h1>Inicio</h1>;
-}
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import Home from './pages/Home';
+import League from './pages/League';
 
 function App() {
   return (
     <BrowserRouter>
-      <nav>
-        <Link to="/">Inicio</Link> | <Link to="/about">About</Link>
-      </nav>
-
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
-      </Routes>
+      <div style={{ minHeight: '100vh', background: '#0d0d1a', fontFamily: 'sans-serif' }}>
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/liga/:leagueKey" element={<League />} />
+        </Routes>
+      </div>
     </BrowserRouter>
   );
 }
