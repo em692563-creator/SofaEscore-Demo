@@ -1,4 +1,5 @@
-const BASE_URL = '/api';
+const IS_DEV = import.meta.env.DEV;
+const BASE_URL = IS_DEV ? '/api' : '/football';
 const API_KEY = import.meta.env.VITE_FOOTBALL_API_KEY;
 const headers = { 'X-Auth-Token': API_KEY };
 
