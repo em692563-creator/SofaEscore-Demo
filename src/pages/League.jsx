@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LEAGUES, getLiveFixtures, getRecentFixtures, getUpcomingFixtures, getFixturesToday } from '../services/api';
+import { getOdds, findOddsForMatch } from '../services/odds';
 import MatchCard from '../components/MatchCard';
 
 const TABS = ['En Vivo', 'Hoy', 'Últimos partidos', 'Próximos partidos'];
@@ -11,18 +12,19 @@ function League() {
   const league = LEAGUES[leagueKey];
   const [tab, setTab] = useState('Últimos partidos');
   const [matches, setMatches] = useState([]);
+  const [oddsMap, setOddsMap] = useState({});
   const [loading, setLoading] = useState(true);
-  const requestId = useRef(0); // identificador único por petición
+  const requestId = useRef(0);
 
   useEffect(() => {
     setMatches([]);
+    setOddsMap({});
     setTab('Últimos partidos');
   }, [leagueKey]);
 
   useEffect(() => {
     if (!league) return;
-
-    const currentId = ++requestId.current; // incrementar en cada efecto
+    const currentId = ++requestId.current;
 
     async function fetchMatches() {
       setLoading(true);
@@ -33,9 +35,19 @@ function League() {
         if (tab === 'Últimos partidos')  data = await getRecentFixtures(league.code);
         if (tab === 'Próximos partidos') data = await getUpcomingFixtures(league.code);
 
-        // Solo actualizar si esta petición sigue siendo la más reciente
-        if (currentId === requestId.current) {
-          setMatches(data);
+        if (currentId !== requestId.current) return;
+        setMatches(data);
+
+        // Cargar cuotas solo para próximos partidos y hoy
+        if (tab === 'Próximos partidos' || tab === 'Hoy' || tab === 'En Vivo') {
+          const oddsList = await getOdds(league.code);
+          if (currentId !== requestId.current) return;
+          const map = {};
+          data.forEach(m => {
+            const o = findOddsForMatch(oddsList, m.homeTeam?.name, m.awayTeam?.name);
+            if (o) map[m.id] = o;
+          });
+          setOddsMap(map);
         }
       } catch (err) {
         if (currentId === requestId.current) {
@@ -43,9 +55,7 @@ function League() {
           setMatches([]);
         }
       } finally {
-        if (currentId === requestId.current) {
-          setLoading(false);
-        }
+        if (currentId === requestId.current) setLoading(false);
       }
     }
 
@@ -71,10 +81,7 @@ function League() {
         ))}
         <button
           onClick={() => navigate(`/liga/${leagueKey}/clasificacion`)}
-          style={{
-            padding: '8px 16px', borderRadius: 20, border: 'none', cursor: 'pointer',
-            background: '#2a2a3e', color: '#aaa',
-          }}
+          style={{ padding: '8px 16px', borderRadius: 20, border: 'none', cursor: 'pointer', background: '#2a2a3e', color: '#aaa' }}
         >
           🏆 Clasificación
         </button>
@@ -84,7 +91,7 @@ function League() {
         ? <p style={{ color: '#aaa' }}>Cargando...</p>
         : matches.length === 0
           ? <p style={{ color: '#888' }}>No hay partidos disponibles.</p>
-          : matches.map(m => <MatchCard key={m.id} match={m} />)
+          : matches.map(m => <MatchCard key={m.id} match={m} odds={oddsMap[m.id]} />)
       }
     </div>
   );
