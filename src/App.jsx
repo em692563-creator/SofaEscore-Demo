@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import League from './pages/League';
+import Debug from './pages/Debug';
 
 function App() {
   return (
@@ -11,6 +12,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/liga/:leagueKey" element={<League />} />
+          <Route path="/debug" element={<Debug />} />
         </Routes>
       </div>
     </BrowserRouter>

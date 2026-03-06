@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { LEAGUES, getLiveFixtures, getLastFixtures, getNextFixtures } from '../services/api';
+import { LEAGUES, getLiveFixtures, getFixturesByRound, getFixtures } from '../services/api';
 import MatchCard from '../components/MatchCard';
 
-const TABS = ['En Vivo', 'Finalizados', 'Próximos'];
+const TABS = ['En Vivo', 'Jornada Actual', 'Hoy'];
 
 function League() {
   const { leagueKey } = useParams();
   const league = LEAGUES[leagueKey];
-  const [tab, setTab] = useState('En Vivo');
+  const [tab, setTab] = useState('Jornada Actual');
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
     if (!league) return;
@@ -18,9 +20,9 @@ function League() {
       setLoading(true);
       try {
         let data = [];
-        if (tab === 'En Vivo')     data = await getLiveFixtures(league.id);
-        if (tab === 'Finalizados') data = await getLastFixtures(league.id, 20);
-        if (tab === 'Próximos')    data = await getNextFixtures(league.id, 20);
+        if (tab === 'En Vivo')         data = await getLiveFixtures(league.id);
+        if (tab === 'Jornada Actual')  data = await getFixturesByRound(league.id);
+        if (tab === 'Hoy')             data = await getFixtures(league.id, today);
         setMatches(data);
       } catch (err) {
         console.error(err);
