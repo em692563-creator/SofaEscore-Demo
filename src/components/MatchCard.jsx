@@ -35,7 +35,7 @@ function MatchCard({ match }) {
       const date = new Date(match.utcDate);
       const hora = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
       const dia = date.toLocaleDateString('es-ES', { weekday: 'short' });
-      const fecha = date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' });
+      const fecha = date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
       return `${dia.charAt(0).toUpperCase() + dia.slice(1)} ${hora}\n${fecha}`;
     }
     return '-';
