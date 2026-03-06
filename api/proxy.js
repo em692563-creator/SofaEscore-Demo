@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   try {
     const response = await fetch(fullUrl, {
       headers: {
-        'X-Auth-Token': process.env.VITE_FOOTBALL_API_KEY,
+        'X-Auth-Token': process.env.FOOTBALL_API_KEY || process.env.VITE_FOOTBALL_API_KEY,
       },
     });
     const data = await response.json();
