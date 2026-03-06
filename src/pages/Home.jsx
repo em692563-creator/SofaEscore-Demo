@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import { LEAGUES, getFixturesToday, getLiveFixtures, getDateString } from '../services/api';
+import { LEAGUES, getFixturesToday, getDateString } from '../services/api';
 import MatchCard from '../components/MatchCard';
 
 function Home() {
-  const [liveMatches, setLiveMatches] = useState([]);
-  const [todayMatches, setTodayMatches] = useState([]);
+  const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const today = getDateString(0);
 
@@ -12,13 +11,13 @@ function Home() {
     async function fetchAll() {
       setLoading(true);
       try {
-        const leagueCodes = Object.values(LEAGUES).map(l => l.code);
-        const [liveResults, todayResults] = await Promise.all([
-          Promise.all(leagueCodes.map(code => getLiveFixtures(code))),
-          Promise.all(leagueCodes.map(code => getFixturesToday(code))),
-        ]);
-        setLiveMatches(liveResults.flat());
-        setTodayMatches(todayResults.flat().filter(m => m.status !== 'IN_PLAY' && m.status !== 'LIVE'));
+        // Una sola liga a la vez para no agotar el rate limit
+        const all = [];
+        for (const league of Object.values(LEAGUES)) {
+          const data = await getFixturesToday(league.code);
+          all.push(...data);
+        }
+        setMatches(all);
       } catch (err) {
         console.error(err);
       } finally {
@@ -26,11 +25,21 @@ function Home() {
       }
     }
     fetchAll();
-    const interval = setInterval(fetchAll, 60000);
-    return () => clearInterval(interval);
   }, []);
 
-  if (loading) return <p style={{ color: '#aaa', padding: 24 }}>Cargando partidos...</p>;
+  const liveMatches = matches.filter(m =>
+    m.status === 'IN_PLAY' || m.status === 'PAUSED' || m.status === 'LIVE'
+  );
+  const otherMatches = matches.filter(m =>
+    m.status !== 'IN_PLAY' && m.status !== 'PAUSED' && m.status !== 'LIVE'
+  );
+
+  if (loading) return (
+    <div style={{ padding: 24, color: '#aaa', textAlign: 'center' }}>
+      <p>⏳ Cargando partidos de hoy...</p>
+      <p style={{ fontSize: 12, marginTop: 8, color: '#666' }}>Puede tardar unos segundos</p>
+    </div>
+  );
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: 16 }}>
@@ -42,9 +51,9 @@ function Home() {
       )}
       <section>
         <h2 style={{ color: '#fff', marginBottom: 12 }}>📅 Hoy — {today}</h2>
-        {todayMatches.length === 0
+        {otherMatches.length === 0
           ? <p style={{ color: '#888' }}>No hay más partidos programados hoy.</p>
-          : todayMatches.map(m => <MatchCard key={m.id} match={m} />)
+          : otherMatches.map(m => <MatchCard key={m.id} match={m} />)
         }
       </section>
     </div>

@@ -4,10 +4,10 @@ const API_KEY = import.meta.env.VITE_FOOTBALL_API_KEY;
 const headers = { 'X-Auth-Token': API_KEY };
 
 const cache = {};
-const CACHE_TTL = 5 * 60 * 1000;
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutos
 
 let lastRequestTime = 0;
-const MIN_INTERVAL = 700;
+const MIN_INTERVAL = 1500; // 1.5s entre peticiones = máx 40/min, bien por debajo del límite
 
 async function apiFetch(path) {
   const now = Date.now();
