@@ -1,14 +1,38 @@
+function TeamBadge({ name }) {
+  const initials = name
+    ? name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+    : '?';
+
+  const colors = [
+    '#e94560', '#0f3460', '#533483', '#e94560',
+    '#16213e', '#1a1a2e', '#2a2a3e', '#533483',
+  ];
+  const color = colors[name?.charCodeAt(0) % colors.length] || '#2a2a3e';
+
+  return (
+    <div style={{
+      width: 28, height: 28, borderRadius: '50%',
+      background: color, display: 'flex',
+      alignItems: 'center', justifyContent: 'center',
+      fontSize: 10, fontWeight: 'bold', color: '#fff',
+      flexShrink: 0,
+    }}>
+      {initials}
+    </div>
+  );
+}
+
 function MatchCard({ match }) {
   const status = match.status;
   const isLive = status === 'IN_PLAY' || status === 'PAUSED' || status === 'LIVE';
   const isFinished = status === 'FINISHED';
 
-  const homeScore = match.score?.fullTime?.home ?? match.score?.halfTime?.home ?? null;
-  const awayScore = match.score?.fullTime?.away ?? match.score?.halfTime?.away ?? null;
+  const homeScore = match.score?.fullTime?.home ?? null;
+  const awayScore = match.score?.fullTime?.away ?? null;
   const scoreText = homeScore !== null ? `${homeScore} - ${awayScore}` : 'vs';
 
   const getStatusLabel = () => {
-    if (isLive) return `⚡ En vivo`;
+    if (isLive) return '⚡ En vivo';
     if (status === 'PAUSED') return 'Descanso';
     if (isFinished) return 'Finalizado';
     if (match.utcDate) {
@@ -17,19 +41,25 @@ function MatchCard({ match }) {
     return '-';
   };
 
+  const homeName = match.homeTeam?.shortName || match.homeTeam?.name || '';
+  const awayName = match.awayTeam?.shortName || match.awayTeam?.name || '';
+  const homeCrest = match.homeTeam?.crest;
+  const awayCrest = match.awayTeam?.crest;
+
   return (
     <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '12px 16px',
-      borderBottom: '1px solid #2a2a3e',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '12px 16px', borderBottom: '1px solid #2a2a3e',
       background: isLive ? '#1a1a2e' : '#16213e',
       borderLeft: isLive ? '3px solid #e94560' : '3px solid transparent',
     }}>
       {/* Equipo local */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '38%' }}>
-        <span style={{ color: '#eee', fontSize: 14 }}>{match.homeTeam.shortName || match.homeTeam.name}</span>
+        {homeCrest
+          ? <img src={homeCrest} alt={homeName} style={{ width: 28, height: 28, objectFit: 'contain' }} />
+          : <TeamBadge name={homeName} />
+        }
+        <span style={{ color: '#eee', fontSize: 14 }}>{homeName}</span>
       </div>
 
       {/* Marcador */}
@@ -42,7 +72,11 @@ function MatchCard({ match }) {
 
       {/* Equipo visitante */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '38%', justifyContent: 'flex-end' }}>
-        <span style={{ color: '#eee', fontSize: 14 }}>{match.awayTeam.shortName || match.awayTeam.name}</span>
+        <span style={{ color: '#eee', fontSize: 14 }}>{awayName}</span>
+        {awayCrest
+          ? <img src={awayCrest} alt={awayName} style={{ width: 28, height: 28, objectFit: 'contain' }} />
+          : <TeamBadge name={awayName} />
+        }
       </div>
     </div>
   );

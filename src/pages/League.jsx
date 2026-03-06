@@ -12,10 +12,17 @@ function League() {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Resetear partidos al cambiar de liga
+  useEffect(() => {
+    setMatches([]);
+    setTab('Últimos partidos');
+  }, [leagueKey]);
+
   useEffect(() => {
     if (!league) return;
     async function fetchMatches() {
       setLoading(true);
+      setMatches([]);
       try {
         let data = [];
         if (tab === 'En Vivo')           data = await getLiveFixtures(league.code);

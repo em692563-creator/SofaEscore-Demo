@@ -3,19 +3,23 @@ const API_KEY = import.meta.env.VITE_FOOTBALL_API_KEY;
 
 const headers = { 'X-Auth-Token': API_KEY };
 
-// Cache simple para evitar llamadas repetidas
+// Cache con clave completa por path
 const cache = {};
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
 async function apiFetch(path) {
   const now = Date.now();
-  if (cache[path] && now - cache[path].ts < CACHE_TTL) {
-    return cache[path].data;
+  const key = path; // clave única por URL completa
+  if (cache[key] && now - cache[key].ts < CACHE_TTL) {
+    return cache[key].data;
   }
   const res = await fetch(`${BASE_URL}${path}`, { headers });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `HTTP ${res.status}`);
+  }
   const data = await res.json();
-  cache[path] = { data, ts: now };
+  cache[key] = { data, ts: now };
   return data;
 }
 
