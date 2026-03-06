@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LEAGUES, getFixturesToday, getDateString } from '../services/api';
+import { getAllMatchesToday, getDateString } from '../services/api';
 import MatchCard from '../components/MatchCard';
 
 function Home() {
@@ -11,12 +11,7 @@ function Home() {
     async function fetchAll() {
       setLoading(true);
       try {
-        // Una sola liga a la vez para no agotar el rate limit
-        const all = [];
-        for (const league of Object.values(LEAGUES)) {
-          const data = await getFixturesToday(league.code);
-          all.push(...data);
-        }
+        const all = await getAllMatchesToday();
         setMatches(all);
       } catch (err) {
         console.error(err);
@@ -37,7 +32,6 @@ function Home() {
   if (loading) return (
     <div style={{ padding: 24, color: '#aaa', textAlign: 'center' }}>
       <p>⏳ Cargando partidos de hoy...</p>
-      <p style={{ fontSize: 12, marginTop: 8, color: '#666' }}>Puede tardar unos segundos</p>
     </div>
   );
 

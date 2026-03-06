@@ -6,6 +6,28 @@ const headers = { 'X-Auth-Token': API_KEY };
 const cache = {};
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutos
 
+// Cargar caché desde localStorage al arrancar
+function loadCacheFromStorage() {
+  try {
+    const stored = localStorage.getItem('api_cache');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      const now = Date.now();
+      Object.entries(parsed).forEach(([key, val]) => {
+        if (now - val.ts < CACHE_TTL) cache[key] = val;
+      });
+    }
+  } catch {}
+}
+
+function saveCacheToStorage() {
+  try {
+    localStorage.setItem('api_cache', JSON.stringify(cache));
+  } catch {}
+}
+
+loadCacheFromStorage();
+
 let lastRequestTime = 0;
 const MIN_INTERVAL = 1500; // 1.5s entre peticiones = máx 40/min, bien por debajo del límite
 
@@ -26,6 +48,7 @@ async function apiFetch(path) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   cache[path] = { data, ts: Date.now() };
+  saveCacheToStorage();
   return data;
 }
 
@@ -45,13 +68,34 @@ export function getDateString(offsetDays = 0) {
 
 // Cargar todos los equipos de las 5 ligas (con caché larga)
 let allTeamsCache = null;
+let loadingTeams = false;
+let loadingCallbacks = [];
+
+// Cargar equipos desde localStorage si existen
+try {
+  const stored = localStorage.getItem('all_teams_cache');
+  if (stored) {
+    const { data, ts } = JSON.parse(stored);
+    if (Date.now() - ts < 24 * 60 * 60 * 1000) allTeamsCache = data; // 24h
+  }
+} catch {}
+
+export function teamsReady() {
+  return allTeamsCache !== null;
+}
+
 export async function getAllTeams() {
   if (allTeamsCache) return allTeamsCache;
 
+  // Si ya hay una carga en progreso, esperar a que termine
+  if (loadingTeams) {
+    return new Promise(resolve => loadingCallbacks.push(resolve));
+  }
+
+  loadingTeams = true;
   const leagues = Object.values(LEAGUES);
   const all = [];
 
-  // Peticiones secuenciales para no agotar el rate limit
   for (const l of leagues) {
     const data = await apiFetch(`/competitions/${l.code}/teams`);
     const teams = (data.teams || []).map(t => ({ ...t, leagueName: l.name, leagueFlag: l.flag }));
@@ -59,6 +103,10 @@ export async function getAllTeams() {
   }
 
   allTeamsCache = all;
+  loadingTeams = false;
+  loadingCallbacks.forEach(cb => cb(allTeamsCache));
+  loadingCallbacks = [];
+  try { localStorage.setItem('all_teams_cache', JSON.stringify({ data: all, ts: Date.now() })); } catch {}
   return allTeamsCache;
 }
 
@@ -76,6 +124,15 @@ export async function getFixturesToday(leagueCode) {
   const today = getDateString(0);
   const data = await apiFetch(`/competitions/${leagueCode}/matches?dateFrom=${today}&dateTo=${today}`);
   return data.matches || [];
+}
+
+// Una sola petición para todos los partidos del día de las 5 ligas
+export async function getAllMatchesToday() {
+  const today = getDateString(0);
+  const leagueIds = Object.values(LEAGUES).map(l => l.id).join(',');
+  const data = await apiFetch(`/matches?date=${today}`);
+  const leagueIdSet = new Set(Object.values(LEAGUES).map(l => l.id));
+  return (data.matches || []).filter(m => leagueIdSet.has(m.competition?.id));
 }
 
 export async function getRecentFixtures(leagueCode) {

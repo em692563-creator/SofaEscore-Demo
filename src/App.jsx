@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import League from './pages/League';
@@ -6,8 +7,16 @@ import Search from './pages/Search';
 import Team from './pages/Team';
 import Standings from './pages/Standings';
 import Debug from './pages/Debug';
+import { getAllTeams } from './services/api';
 
 function App() {
+  // Precargar equipos en segundo plano tras 10 segundos
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      getAllTeams();
+    }, 10000);
+    return () => clearTimeout(timer);
+  }, []);
   return (
     <BrowserRouter>
       <div style={{ minHeight: '100vh', background: '#0d0d1a', fontFamily: 'sans-serif' }}>

@@ -1,50 +1,43 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { searchTeams, getAllTeams } from '../services/api';
+import { searchTeams, getAllTeams, teamsReady } from '../services/api';
 
 function Search() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [preloading, setPreloading] = useState(false);
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(teamsReady());
   const debounceRef = useRef(null);
   const navigate = useNavigate();
 
-  function handleSearch(q) {
+  useEffect(() => {
+    if (!teamsReady()) {
+      setPreloading(true);
+      getAllTeams().then(() => {
+        setReady(true);
+        setPreloading(false);
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!ready || query.trim().length < 2) {
+      setResults([]);
+      return;
+    }
     clearTimeout(debounceRef.current);
-    if (q.trim().length < 2) { setResults([]); return; }
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
-        const teams = await searchTeams(q.trim());
+        const teams = await searchTeams(query.trim());
         setResults(teams);
-      } catch (err) {
-        setResults([]);
       } finally {
         setLoading(false);
       }
     }, 300);
-  }
-
-  async function handleInputChange(e) {
-    const q = e.target.value;
-    setQuery(q);
-
-    // Si los equipos no están cargados aún, cargarlos primero
-    if (!ready && q.trim().length >= 2) {
-      setPreloading(true);
-      try {
-        await getAllTeams();
-        setReady(true);
-        handleSearch(q);
-      } finally {
-        setPreloading(false);
-      }
-    } else {
-      handleSearch(q);
-    }
-  }
+    return () => clearTimeout(debounceRef.current);
+  }, [query, ready]);
 
   return (
     <div style={{ maxWidth: 600, margin: '0 auto', padding: 24 }}>
@@ -53,26 +46,27 @@ function Search() {
       <input
         type="text"
         value={query}
-        onChange={handleInputChange}
-        placeholder="Escribe el nombre de un equipo..."
+        onChange={e => setQuery(e.target.value)}
+        placeholder={preloading ? 'Cargando equipos...' : 'Escribe el nombre de un equipo...'}
+        disabled={preloading}
         style={{
           width: '100%', padding: '12px 16px', fontSize: 16,
           background: '#1a1a2e', border: '1px solid #2a2a3e',
-          borderRadius: 10, color: '#fff', outline: 'none',
-          boxSizing: 'border-box',
+          borderRadius: 10, color: preloading ? '#666' : '#fff',
+          outline: 'none', boxSizing: 'border-box',
+          cursor: preloading ? 'wait' : 'text',
         }}
       />
 
       {preloading && (
         <div style={{ marginTop: 16, background: '#1a1a2e', borderRadius: 10, padding: 16 }}>
-          <p style={{ color: '#e94560', marginBottom: 8 }}>⏳ Cargando equipos de las 5 ligas...</p>
+          <p style={{ color: '#e94560', marginBottom: 4 }}>⏳ Cargando equipos de las 5 ligas...</p>
           <p style={{ color: '#666', fontSize: 12 }}>Solo ocurre la primera vez, luego es instantáneo.</p>
         </div>
       )}
 
-      {!preloading && loading && <p style={{ color: '#888', marginTop: 12 }}>Buscando...</p>}
-
-      {!preloading && !loading && query.length >= 2 && results.length === 0 && (
+      {ready && loading && <p style={{ color: '#888', marginTop: 12 }}>Buscando...</p>}
+      {ready && !loading && query.length >= 2 && results.length === 0 && (
         <p style={{ color: '#888', marginTop: 12 }}>No se encontraron equipos.</p>
       )}
 
